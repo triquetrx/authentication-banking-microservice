@@ -1,4 +1,4 @@
-package com.cognizant.componentprocessing.repository;
+package com.cognizant.componentprocessing.exception;
 
 public class UsernameTakenException extends Exception {
 
