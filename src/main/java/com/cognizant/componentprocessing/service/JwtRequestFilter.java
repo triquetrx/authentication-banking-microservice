@@ -15,6 +15,7 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import com.cognizant.componentprocessing.exception.InvalidTokenException;
 import com.cognizant.componentprocessing.util.JwtTokenUtil;
 
 import io.jsonwebtoken.ExpiredJwtException;
@@ -49,6 +50,8 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 				logger.warn("JWT Token has expired for " + jwtToken);
 			} catch (SignatureException e) {
 				logger.warn("Unauthorized Access for "+jwtToken);
+			} catch (InvalidTokenException e) {
+				logger.warn("Forged Token");
 			}
 		} else {
 			logger.warn("JWT Token does not begin with Bearer String");

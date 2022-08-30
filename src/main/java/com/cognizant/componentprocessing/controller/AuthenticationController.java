@@ -25,7 +25,7 @@ import com.cognizant.componentprocessing.exception.PasswordNotAMatchException;
 import com.cognizant.componentprocessing.model.AuthenticationRequest;
 import com.cognizant.componentprocessing.model.AuthenticationResponse;
 import com.cognizant.componentprocessing.service.JwtUserDetailsService;
-import com.cognizant.componentprocessing.service.RegisterUserService;
+import com.cognizant.componentprocessing.service.UserRequestService;
 import com.cognizant.componentprocessing.util.JwtTokenUtil;
 
 @RestController
@@ -41,25 +41,27 @@ public class AuthenticationController {
 	JwtUserDetailsService userDetails;
 
 	@Autowired
-	RegisterUserService registerService;
+	UserRequestService requestService;
 
 	private ValidatingDTO dto = new ValidatingDTO();
 
-	@CrossOrigin(origins = "http://localhost:3000")
+	@CrossOrigin(origins = "http://localhost:5000")
 	@PostMapping("/authenticate")
-	public ResponseEntity<?> createAuthentication(@RequestBody AuthenticationRequest request) throws Exception {
-		authenticate(request.getUsername(), request.getPassword());
-		final UserDetails userRequest = userDetails.loadUserByUsername(request.getUsername());
-		final String token = jwt.generateToken(userRequest);
+	public ResponseEntity<?> createAuthentication(@RequestBody AuthenticationRequest request) {
 		try {
+			authenticate(request.getUsername(), request.getPassword());
+			final UserDetails userRequest = userDetails.loadUserByUsername(request.getUsername());
+			final String token = jwt.generateToken(userRequest);
 			return ResponseEntity.ok(new AuthenticationResponse(token, userDetails.getName(userRequest.getUsername())));
-		} catch (Exception e) {
-			return (ResponseEntity<?>) ResponseEntity.status(400);
+		} catch (DisabledException e) {
+			return new ResponseEntity<>(e.getMessage(), HttpStatus.UNAUTHORIZED);
+		} catch (BadCredentialsException e) {
+			return new ResponseEntity<>(e.getMessage(), HttpStatus.UNAUTHORIZED);
 		}
 	}
 
 	@GetMapping("/validate")
-	@CrossOrigin(origins = "http://localhost:3000")
+	@CrossOrigin(origins = "http://localhost:5000")
 	public ResponseEntity<?> validatingToken(@RequestHeader(name = "Authorization") String token) {
 
 		String tokenDup = token.substring(7);
@@ -73,32 +75,30 @@ public class AuthenticationController {
 				return new ResponseEntity<>(dto, HttpStatus.OK);
 			}
 			dto.setValidStatus(false);
-			return new ResponseEntity<>(dto, HttpStatus.FORBIDDEN);
+			return new ResponseEntity<>("TOKEN_INVALID_OR_EXPIRED", HttpStatus.FORBIDDEN);
 		} catch (Exception e) {
-			dto.setValidStatus(false);
-			return new ResponseEntity<>(dto, HttpStatus.FORBIDDEN);
+			return new ResponseEntity<>("INVALID_TOKEN", HttpStatus.FORBIDDEN);
 		}
-
 	}
 
-	private void authenticate(String username, String password) throws Exception {
+	private void authenticate(String username, String password) throws DisabledException, BadCredentialsException {
 		try {
 			authentication.authenticate(new UsernamePasswordAuthenticationToken(username, password));
 		} catch (DisabledException e) {
-			throw new Exception("USER_DISABLED", e);
+			throw new DisabledException("USER_DISABLED", e);
 		} catch (BadCredentialsException e) {
-			throw new Exception("INVALID_CREDENTIALS", e);
+			throw new BadCredentialsException("INVALID_CREDENTIALS", e);
 		}
 	}
 
-	@CrossOrigin(origins = "http://localhost:3000")
+	@CrossOrigin(origins = "http://localhost:5000")
 	@PostMapping("/register")
 	public ResponseEntity<?> addNewUser(@RequestBody NewUserDTO newUserDTO) {
-		registerService.newUser(newUserDTO);
+		requestService.newUser(newUserDTO);
 		return ResponseEntity.ok("New User Created");
 	}
 
-	@CrossOrigin(origins = "http://localhost:3000")
+	@CrossOrigin(origins = "http://localhost:5000")
 	@PostMapping("/change-password")
 	public ResponseEntity<?> changePassword(@RequestHeader(name = "Authorization") String token,
 			@RequestBody PasswordChangeDTO dto) {
@@ -106,7 +106,7 @@ public class AuthenticationController {
 		try {
 			UserDetails user = userDetails.loadUserByUsername(jwt.getUsernameFromToken(tokenDup));
 			if (jwt.validateToken(tokenDup, user)) {
-				String result = registerService.changePassword(user.getUsername(), dto);
+				String result = requestService.changePassword(user.getUsername(), dto);
 				return new ResponseEntity<>(result, HttpStatus.OK);
 			}
 			return new ResponseEntity<>("UNAUTHORIZED_ACCESS", HttpStatus.FORBIDDEN);
@@ -117,7 +117,7 @@ public class AuthenticationController {
 		}
 	}
 
-	@CrossOrigin(origins = "http://localhost:3000")
+	@CrossOrigin(origins = "http://localhost:5000")
 	@PostMapping("/check-password")
 	public ResponseEntity<?> chechPassword(@RequestHeader(name = "Authorization") String token,
 			@RequestBody ConfirmPasswordDTO confirmPasswordDTO) {
@@ -125,14 +125,14 @@ public class AuthenticationController {
 		try {
 			UserDetails user = userDetails.loadUserByUsername(jwt.getUsernameFromToken(tokenDup));
 			if (jwt.validateToken(tokenDup, user)) {
-				boolean result = registerService.checkPassword(user.getUsername(), confirmPasswordDTO);
+				boolean result = requestService.checkPassword(user.getUsername(), confirmPasswordDTO);
 				return new ResponseEntity<>(result, HttpStatus.OK);
 			}
-			return new ResponseEntity<>("UNAUTHORIZED_ACCESS", HttpStatus.BAD_REQUEST);
+			return new ResponseEntity<>("UNAUTHORIZED_ACCESS", HttpStatus.FORBIDDEN);
 		} catch (PasswordNotAMatchException e) {
-			return new ResponseEntity<>("PASSWORD_NOT_A_MATCH", HttpStatus.BAD_REQUEST);
+			return new ResponseEntity<>("PASSWORD_NOT_A_MATCH", HttpStatus.FORBIDDEN);
 		} catch (Exception e) {
-			return new ResponseEntity<>("UNAUTHORIZED_ENTRY", HttpStatus.FORBIDDEN);
+			return new ResponseEntity<>("UNAUTHORIZED_ENTRY", HttpStatus.BAD_REQUEST);
 		}
 	}
 }

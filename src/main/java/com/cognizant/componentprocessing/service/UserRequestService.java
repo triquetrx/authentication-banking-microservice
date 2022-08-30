@@ -13,7 +13,7 @@ import com.cognizant.componentprocessing.model.Users;
 import com.cognizant.componentprocessing.repository.UserRepository;
 
 @Service
-public class RegisterUserService {
+public class UserRequestService {
 
 	@Autowired
 	UserRepository repository;
