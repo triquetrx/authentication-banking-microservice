@@ -2,6 +2,8 @@ package com.cognizant.authentication.service;
 
 import java.util.Optional;
 
+import javax.transaction.Transactional;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -24,11 +26,13 @@ public class JwtUserDetailsService implements UserDetailsService {
 		return users.map(LocalUserDetails::new).get();
 	}
 
+	@Transactional
 	public String getName(String username) {
 		Users users = userRepo.findByUsername(username).get();
 		return users.getName();
 	}
 
+	@Transactional
 	public String getCustomerId(String username) {
 		Users users = userRepo.findByUsername(username).get();
 		return users.getCustomerId();

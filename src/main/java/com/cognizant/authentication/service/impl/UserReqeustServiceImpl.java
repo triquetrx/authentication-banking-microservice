@@ -1,5 +1,7 @@
 package com.cognizant.authentication.service.impl;
 
+import javax.transaction.Transactional;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -20,6 +22,7 @@ public class UserReqeustServiceImpl implements UserRequestService  {
 	UserRepository repository;
 
 	@Override
+	@Transactional
 	public void newUser(NewUserDTO newUserDTO) {
 
 		int id = (int) repository.count() + 1;
@@ -28,6 +31,7 @@ public class UserReqeustServiceImpl implements UserRequestService  {
 	}
 	
 	@Override
+	@Transactional
 	public String changePassword(String username,PasswordChangeDTO passwordChangeDTO) throws PasswordNotAMatchException {
 		Users users = repository.findByUsername(username).get();
 		if(encoder().matches(passwordChangeDTO.getOldPassword(), users.getPassword())) {
@@ -40,6 +44,7 @@ public class UserReqeustServiceImpl implements UserRequestService  {
 	}
 	
 	@Override
+	@Transactional
 	public boolean checkPassword(String username,ConfirmPasswordDTO dto) throws PasswordNotAMatchException {
 		Users users = repository.findByUsername(username).get();
 		if(encoder().matches(dto.getConfirmPassword(), users.getPassword())) {
